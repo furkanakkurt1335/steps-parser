@@ -46,6 +46,9 @@ def parse_corpus(config, corpus_file, output, parser=None, keep_columns=None):
         parser = trainer.parser
 
     annotation_layers = config["data_loaders"]["args"]["annotation_layers"]
+    keep_columns = list(range(2, 10))
+    for annotation_id, annotation_layer in annotation_layers.items():
+        keep_columns.remove(annotation_layer['source_column'])
     if keep_columns is not None:
         for col in keep_columns:
             annotation_layers[col] = {"type": "TagSequence", "source_column": col}

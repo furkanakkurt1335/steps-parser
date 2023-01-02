@@ -10,6 +10,9 @@ import mlflow
 import logging
 import logging.config
 
+# wandb related
+import wandb
+
 DEFAULT_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -93,8 +96,10 @@ class Logger:
         """
         if percent:
             self.info("{}: {:.2f}%".format(metric_name, value*100))
+            wandb.log({metric_name: float(value*100)})
         else:
             self.info("{}: {:.4}".format(metric_name, value))
+            wandb.log({metric_name: float(value)})
 
         if self.use_mlflow:
             mlflow.log_metric(metric_name, value, step=step)

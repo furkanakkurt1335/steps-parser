@@ -1,0 +1,45 @@
+2022-12-28 04:00:28,953 - WARNING - Warning: There's no GPU available on this machine,training will be performed on CPU.
+2022-12-28 04:00:28,956 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.8/dep_parsing/1227_153113/model_best.pth ...
+2022-12-28 04:00:30,674 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2022-12-28 04:00:30,836 - INFO - Checkpoint loaded. Resume from epoch 67
+2022-12-28 04:01:33,897 - WARNING - Warning: There's no GPU available on this machine,training will be performed on CPU.
+2022-12-28 04:01:33,899 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.8/dep_parsing/1227_153113/model_best.pth ...
+2022-12-28 04:01:35,455 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2022-12-28 04:01:35,744 - INFO - Checkpoint loaded. Resume from epoch 67
+2022-12-28 04:08:45,905 - WARNING - Warning: There's no GPU available on this machine,training will be performed on CPU.
+2022-12-28 04:08:45,907 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.8/dep_parsing/1227_153113/model_best.pth ...
+2022-12-28 04:08:47,540 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2022-12-28 04:08:47,694 - INFO - Checkpoint loaded. Resume from epoch 67
+2022-12-28 04:09:16,439 - WARNING - Warning: There's no GPU available on this machine,training will be performed on CPU.
+2022-12-28 04:09:16,441 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.8/dep_parsing/1227_153152/model_best.pth ...
+2022-12-28 04:09:17,924 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2022-12-28 04:09:18,082 - INFO - Checkpoint loaded. Resume from epoch 62
+2022-12-28 04:09:46,589 - WARNING - Warning: There's no GPU available on this machine,training will be performed on CPU.
+2022-12-28 04:09:46,591 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.11-unr/dep_parsing/1227_153224/model_best.pth ...
+2022-12-28 04:09:47,980 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2022-12-28 04:09:48,141 - INFO - Checkpoint loaded. Resume from epoch 54
+2022-12-28 04:15:39,762 - WARNING - Warning: There's no GPU available on this machine,training will be performed on CPU.
+2022-12-28 04:15:39,765 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.8/dep_parsing/1227_153113/model_best.pth ...
+2022-12-28 04:15:41,419 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2022-12-28 04:15:41,568 - INFO - Checkpoint loaded. Resume from epoch 67
+2022-12-28 04:31:03,950 - WARNING - Warning: There's no GPU available on this machine,training will be performed on CPU.
+2022-12-28 04:31:03,952 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.8/dep_parsing/1227_153113/model_best.pth ...
+2022-12-28 04:31:05,582 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2022-12-28 04:31:05,739 - INFO - Checkpoint loaded. Resume from epoch 67
+2022-12-28 04:34:10,002 - WARNING - Warning: There's no GPU available on this machine,training will be performed on CPU.
+2022-12-28 04:34:10,005 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.8/dep_parsing/1227_153152/model_best.pth ...
+2022-12-28 04:34:11,514 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2022-12-28 04:34:11,671 - INFO - Checkpoint loaded. Resume from epoch 62
+2022-12-28 04:36:13,583 - WARNING - Warning: There's no GPU available on this machine,training will be performed on CPU.
+2022-12-28 04:36:13,585 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.11-unr/dep_parsing/1227_153224/model_best.pth ...
+2022-12-28 04:36:14,896 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2022-12-28 04:36:15,054 - INFO - Checkpoint loaded. Resume from epoch 54
+2023-01-02 12:01:31,543 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.11/upos_feats_MTL/0102_093057/model_best.pth ...
+2023-01-02 12:01:33,023 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2023-01-02 12:01:35,077 - INFO - Checkpoint loaded. Resume from epoch 103
+2023-01-02 12:03:10,798 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.11/upos_feats_MTL/0102_093057/model_best.pth ...
+2023-01-02 12:03:12,186 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2023-01-02 12:03:14,315 - INFO - Checkpoint loaded. Resume from epoch 103
+2023-01-02 12:04:16,604 - INFO - Loading checkpoint: /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/trained_models/boun_treebank_v2.11/upos_feats_MTL/0102_093057/model_best.pth ...
+2023-01-02 12:04:17,964 - WARNING - Warning: Architecture configuration given in config file is different from that of checkpoint. This may yield an exception while state_dict is being loaded.
+2023-01-02 12:04:19,906 - INFO - Checkpoint loaded. Resume from epoch 103

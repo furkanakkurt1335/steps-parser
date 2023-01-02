@@ -15,6 +15,8 @@ from pathlib import Path
 from init_config import ConfigParser
 from parse_corpus import reset_file, parse_corpus, run_evaluation
 
+import os
+import wandb
 
 def main(config, eval_mode="basic"):
     """Main function to initialize model, load data, and run training.
@@ -51,12 +53,22 @@ def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
 
     logger.info("Evaluation on test set:")
 
+    THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+    tests_parsed_folder_path = os.path.join(THIS_DIR, 'tests-parsed')
+    test_parsed_path = os.path.join(tests_parsed_folder_path, '{s_id}_{r_n}.conllu'.format(s_id=os.environ.get('SLURM_JOB_ID'), r_n=wandb.run.name))
+    # test_parsed_path = os.path.join(tests_parsed_folder_path, '{s_id}.conllu'.format(s_id=os.environ.get('SLURM_JOB_ID')))
+    if not(os.path.exists(tests_parsed_folder_path)):
+        os.mkdir(tests_parsed_folder_path)
+
     with open(config["data_loaders"]["paths"]["test"], "r") as gold_test_file, \
-         open("test-parsed.conllu", "w") as output_file:
+         open(test_parsed_path, "w") as output_file:
         parse_corpus(config, gold_test_file, output_file, parser=trainer.parser)
-        output_file = reset_file(output_file, "test-parsed.conllu")
+        output_file = reset_file(output_file, test_parsed_path)
         gold_test_file = reset_file(gold_test_file, config["data_loaders"]["paths"]["test"])
         test_evaluation = run_evaluation(gold_test_file, output_file, mode=eval_mode)
+    
+    # for score_key in test_evaluation.keys():
+    #     wandb.log({score_key: str(test_evaluation[score_key])})
 
     if eval_mode == "basic":
         logger.log_final_metrics_basic(test_evaluation, suffix="_test")
@@ -65,7 +77,7 @@ def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
     else:
         raise Exception(f"Unknown evaluation mode {eval_mode}")
 
-    logger.log_artifact("test-parsed.conllu")
+    logger.log_artifact(test_parsed_path)
 
 
 def init_config_modification(raw_modifications):
@@ -105,6 +117,10 @@ if __name__ == '__main__':
     modification = init_config_modification(args.modification) if args.modification is not None else dict()
     if args.save_dir is not None:
         modification["trainer.save_dir"] = args.save_dir
+
+    wandb.init(project="eval-ud")
+    config_name = os.path.splitext(os.path.basename(args.config))[0]
+    wandb.run.name = config_name
 
     config = ConfigParser.from_args(args, modification=modification)
     main(config, eval_mode=args.eval)

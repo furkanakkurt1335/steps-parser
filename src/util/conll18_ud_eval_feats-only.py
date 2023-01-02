@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
 
-# Code from CoNLL 2018 UD shared task updated for evaluation of enhanced
-# dependencies in IWPT 2020 shared task.
-# -- read DEPS, split on '|', compute overlap
-# New metrics ELAS and EULAS.
-# Gosse Bouma
-# New option --enhancements can switch off evaluation of certain types of
-# enhancements: default --enhancements 0 ... evaluate all enhancement types
-# 1 ... no gapping; 2 ... no coord shared parents; 3 ... no coord shared dependents
-# 4 ... no xsubj (control verbs); 5 ... no relative clauses; 6 ... no case info in deprels;
-# combinations: 12 ... both 1 and 2 apply
-
 # Compatible with Python 2.7 and 3.2+, can be used either as a module
 # or a standalone executable.
 #
@@ -35,9 +24,9 @@
 
 # Command line usage
 # ------------------
-# iwpt20_eud_eval.py3 [-v] [-c] gold_conllu_file system_conllu_file
+# conll18_ud_eval.py [-v] gold_conllu_file system_conllu_file
 #
-# - if no -v is given, only the official IWPT 2020 Shared Task evaluation metrics
+# - if no -v is given, only the official CoNLL18 UD Shared Task evaluation metrics
 #   are printed
 # - if -v is given, more metrics are printed (as precision, recall, F1 score,
 #   and in case the metric is computed on aligned words also accuracy on these):
@@ -141,21 +130,8 @@ def _decode(text):
 def _encode(text):
     return text if sys.version_info[0] >= 3 or not isinstance(text, unicode) else text.encode("utf-8")
 
-CASE_DEPRELS = {'obl','nmod','conj','advcl'}
-UNIVERSAL_DEPREL_EXTENSIONS = {'pass','relcl','xsubj'}
-
-# modify the set of deps produced by system to be in accordance with gold treebank type
-# return a (filtered) list of (hd,dependency_path) tuples. -- GB
-def process_enhanced_deps(deps) :
-    edeps = []
-    for edep in deps.split('|') :
-        (hd,path) = edep.split(':',1)
-        steps = path.split('>') # collapsing empty nodes gives rise to paths like this : 3:conj:en>obl:voor
-        edeps.append((hd,steps))   # (3,['conj:en','obj:voor'])
-    return edeps
-
 # Load given CoNLL-U file into internal representation
-def load_conllu(file,treebank_type):
+def load_conllu(file):
     # Internal representation classes
     class UDRepresentation:
         def __init__(self):
@@ -191,13 +167,10 @@ def load_conllu(file,treebank_type):
             self.columns[FEATS] = "|".join(sorted(feat for feat in columns[FEATS].split("|")
                                                   if feat.split("=", 1)[0] in UNIVERSAL_FEATURES))
             # Let's ignore language-specific deprel subtypes.
-            self.columns[DEPREL] = columns[DEPREL].split(":")[0]
+            # self.columns[DEPREL] = columns[DEPREL].split(":")[0]
             # Precompute which deprels are CONTENT_DEPRELS and which FUNCTIONAL_DEPRELS
-            self.is_content_deprel = self.columns[DEPREL] in CONTENT_DEPRELS
-            self.is_functional_deprel = self.columns[DEPREL] in FUNCTIONAL_DEPRELS
-            # store enhanced deps --GB
-            # split string positions and enhanced labels as well?
-            self.columns[DEPS] = process_enhanced_deps(columns[DEPS])
+            # self.is_content_deprel = self.columns[DEPREL] in CONTENT_DEPRELS
+            # self.is_functional_deprel = self.columns[DEPREL] in FUNCTIONAL_DEPRELS
 
     ud = UDRepresentation()
 
@@ -219,126 +192,30 @@ def load_conllu(file,treebank_type):
             sentence_start = len(ud.words)
         if not line:
             # Add parent and children UDWord links and check there are no cycles
-            def process_word(word):
-                if word.parent == "remapping":
-                    raise UDError("There is a cycle in a sentence")
-                if word.parent is None:
-                    head = int(word.columns[HEAD])
-                    if head < 0 or head > len(ud.words) - sentence_start:
-                        raise UDError("HEAD '{}' points outside of the sentence".format(_encode(word.columns[HEAD])))
-                    if head:
-                        parent = ud.words[sentence_start + head - 1]
-                        word.parent = "remapping"
-                        process_word(parent)
-                        word.parent = parent
+            # def process_word(word):
+            #     if word.parent == "remapping":
+            #         raise UDError("There is a cycle in a sentence")
+                # if word.parent is None:
+                #     head = int(word.columns[HEAD])
+                #     if head < 0 or head > len(ud.words) - sentence_start:
+                #         raise UDError("HEAD '{}' points outside of the sentence".format(_encode(word.columns[HEAD])))
+                #     if head:
+                #         parent = ud.words[sentence_start + head - 1]
+                #         word.parent = "remapping"
+                #         process_word(parent)
+                #         word.parent = parent
 
-
-            position = sentence_start # need to incrementally keep track of current position for loop detection in relcl
-            for word in ud.words[sentence_start:]:
-                process_word(word)
-                enhanced_deps = word.columns[DEPS]
-                # replace head positions of enhanced dependencies with parent word object -- GB
-                processed_deps = []
-                for (head,steps) in word.columns[DEPS] :       # (3,['conj:en','obj:voor'])
-                    hd = int(head)
-                    parent = ud.words[sentence_start + hd -1] if hd else hd  # just assign '0' to parent for root cases
-                    processed_deps.append((parent,steps))
-                enhanced_deps = processed_deps
-
-                # ignore rel>rel dependencies, and instead append the original hd/rel edge
-                # note that this also ignores other extensions (like adding lemma's)
-                # note that this sometimes introduces duplicates (if orig hd/rel was already included in DEPS)
-                if (treebank_type['no_gapping']) : # enhancement 1
-                    processed_deps = []
-                    for (parent,steps) in enhanced_deps :
-                        if len(steps) > 1 :
-                            processed_deps.append((word.parent,[word.columns[DEPREL]]))
-                        else :
-                            if (parent,steps) in processed_deps :
-                                True
-                            else :
-                                processed_deps.append((parent,steps))
-                    enhanced_deps = processed_deps
-
-                # for a given conj node, any rel other than conj in DEPS can be ignored
-                if treebank_type['no_shared_parents_in_coordination'] :   # enhancement  2
-                    for (hd,steps) in enhanced_deps :
-                        if len(steps) == 1 and steps[0].startswith('conj') :
-                            enhanced_deps = [(hd,steps)]
-
-                # deprels not matching ud_hd/ud_dep are spurious.
-                #  czech/pud estonian/ewt syntagrus finnish/pud
-                # TO DO: treebanks that do not mark xcomp and relcl subjects
-                if treebank_type['no_shared_dependents_in_coordination'] : # enhancement  3
-                    processed_deps = []
-                    for (hd,steps) in enhanced_deps :
-                        duplicate = 0
-                        for (hd2,steps2) in enhanced_deps :
-                            if steps == steps2 and hd2 == word.columns[HEAD]  and hd != hd2  : # checking only for ud_hd here, check for ud_dep as well?
-                                duplicate = 1
-                        if not(duplicate) :
-                            processed_deps.append((hd,steps))
-                    enhanced_deps = processed_deps
-
-                # if treebank does not have control relations: subjects of xcomp parents in system are to be skipped
-                # note that rel is actually a path sometimes rel1>rel2 in theory rel2 could be subj?
-                # from lassy-small: 7:conj:en>nsubj:pass|7:conj:en>nsubj:xsubj    (7,['conj:en','nsubj:xsubj'])
-                if (treebank_type['no_control']) : # enhancement 4
-                    processed_deps = []
-                    for (parent,steps) in enhanced_deps :
-                        include = 1
-                        if ( parent and parent.columns[DEPREL] == 'xcomp') :
-                            for rel in steps:
-                                if rel.startswith('nsubj') :
-                                    include = 0
-                        if include :
-                            processed_deps.append((parent,steps))
-                    enhanced_deps = processed_deps
-
-                if (treebank_type['no_external_arguments_of_relative_clauses']) : # enhancement 5
-                    processed_deps = []
-                    for (parent,steps) in enhanced_deps :
-                        if (steps[0] == 'ref') :
-                            processed_deps.append((word.parent,[word.columns[DEPREL]]))  # append the original relation
-                        # ignore external argument link
-                        # external args are deps of an acl:relcl where that acl also is a dependent of external arg (i.e. ext arg introduces a cycle)
-                        elif ( parent and parent.columns[DEPREL].startswith('acl')  and int(parent.columns[HEAD]) == position - sentence_start ) :
-                            #print('removed external argument')
-                            True
-                        else :
-                            processed_deps.append((parent,steps))
-                    enhanced_deps = processed_deps
-
-                # treebanks where no lemma info has been added
-                if treebank_type['no_case_info'] :  # enhancement number 6
-                    processed_deps = []
-                    for (hd,steps) in enhanced_deps :
-                        processed_steps = []
-                        for dep in steps :
-                            depparts = dep.split(':')
-                            if depparts[0] in  CASE_DEPRELS :
-                                if (len(depparts) == 2 and not(depparts[1] in UNIVERSAL_DEPREL_EXTENSIONS )) :
-                                    dep = depparts[0]
-                            processed_steps.append(dep)
-                        processed_deps.append((hd,processed_steps))
-                    enhanced_deps = processed_deps
-
-                position += 1
-                word.columns[DEPS] = enhanced_deps
-
+            # for word in ud.words[sentence_start:]:
+                # process_word(word)
             # func_children cannot be assigned within process_word
             # because it is called recursively and may result in adding one child twice.
-            for word in ud.words[sentence_start:]:
-                if word.parent and word.is_functional_deprel:
-                    word.parent.functional_children.append(word)
-
-            if len(ud.words) == sentence_start :
-            	raise UDError("There is a sentence with 0 tokens (possibly a double blank line)")
-
+            # for word in ud.words[sentence_start:]:
+            #     if word.parent and word.is_functional_deprel:
+            #         word.parent.functional_children.append(word)
 
             # Check there is a single root node
-            if len([word for word in ud.words[sentence_start:] if word.parent is None]) != 1:
-                raise UDError("There are multiple roots in a sentence")
+            # if len([word for word in ud.words[sentence_start:] if word.parent is None]) != 1:
+            #     raise UDError("There are multiple roots in a sentence")
 
             # End the sentence
             ud.sentences[-1].end = index
@@ -351,9 +228,8 @@ def load_conllu(file,treebank_type):
             raise UDError("The CoNLL-U line does not contain 10 tab-separated columns: '{}'".format(_encode(line)))
 
         # Skip empty nodes
-        # After collapsing empty nodes into the enhancements, these should not occur --GB
         if "." in columns[ID]:
-            raise UDError("The collapsed CoNLL-U line still contains empty nodes: {}".format(_encode(line)))
+            continue
 
         # Delete spaces from FORM, so gold.characters == system.characters
         # even if one of them tokenizes the space. Use any Unicode character
@@ -380,7 +256,6 @@ def load_conllu(file,treebank_type):
                 if len(word_columns) != 10:
                     raise UDError("The CoNLL-U line does not contain 10 tab-separated columns: '{}'".format(_encode(word_line)))
                 ud.words.append(UDWord(ud.tokens[-1], word_columns, is_multiword=True))
-
         # Basic tokens/words
         else:
             try:
@@ -391,12 +266,12 @@ def load_conllu(file,treebank_type):
                 raise UDError("Incorrect word ID '{}' for word '{}', expected '{}'".format(
                     _encode(columns[ID]), _encode(columns[FORM]), len(ud.words) - sentence_start + 1))
 
-            try:
-                head_id = int(columns[HEAD])
-            except:
-                raise UDError("Cannot parse HEAD '{}'".format(_encode(columns[HEAD])))
-            if head_id < 0:
-                raise UDError("HEAD cannot be negative")
+            # try:
+            #     head_id = int(columns[HEAD])
+            # except:
+            #     raise UDError("Cannot parse HEAD '{}'".format(_encode(columns[HEAD])))
+            # if head_id < 0:
+            #     raise UDError("HEAD cannot be negative")
 
             ud.words.append(UDWord(ud.tokens[-1], columns, is_multiword=False))
 
@@ -470,36 +345,6 @@ def evaluate(gold_ud, system_ud):
                     correct += 1
 
         return Score(gold, system, correct, aligned)
-
-    def enhanced_alignment_score(alignment,EULAS):
-        # count all matching enhanced deprels in gold, system GB
-        # gold and system = sum of gold and predicted deps
-        # parents are pointers to word object, make sure to compare system parent with aligned word in gold in cases where
-        # tokenization introduces mismatches in number of words per sentence.
-        gold = 0
-        for gold_word in alignment.gold_words :
-            gold += len(gold_word.columns[DEPS])
-        system = 0
-        for system_word in alignment.system_words :
-            system += len(system_word.columns[DEPS])
-        # NB aligned does not play a role in computing f1 score -- GB
-        aligned = len(alignment.matched_words)
-        correct = 0
-        for words in alignment.matched_words:
-                gold_deps = words.gold_word.columns[DEPS]
-                system_deps = words.system_word.columns[DEPS]
-                for (parent,dep) in gold_deps :
-                    eulas_dep = [d.split(':')[0] for d in dep]
-                    for (sparent,sdep) in system_deps:
-                        eulas_sdep = [d.split(':')[0] for d in sdep]
-                        if dep == sdep or ( eulas_dep == eulas_sdep and EULAS ) :
-                            if parent == alignment.matched_words_map.get(sparent,"NotAligned") :
-                                correct += 1
-                            elif (parent == 0 and sparent == 0) :  # cases where parent is root
-                                correct += 1
-
-        return Score(gold, system, correct, aligned)
-
 
     def beyond_end(words, i, multiword_span_end):
         if i >= len(words):
@@ -609,45 +454,33 @@ def evaluate(gold_ud, system_ud):
         "Tokens": spans_score(gold_ud.tokens, system_ud.tokens),
         "Sentences": spans_score(gold_ud.sentences, system_ud.sentences),
         "Words": alignment_score(alignment),
-        "UPOS": alignment_score(alignment, lambda w, _: w.columns[UPOS]),
-        "XPOS": alignment_score(alignment, lambda w, _: w.columns[XPOS]),
+        # "UPOS": alignment_score(alignment, lambda w, _: w.columns[UPOS]),
+        # "XPOS": alignment_score(alignment, lambda w, _: w.columns[XPOS]),
         "UFeats": alignment_score(alignment, lambda w, _: w.columns[FEATS]),
-        "AllTags": alignment_score(alignment, lambda w, _: (w.columns[UPOS], w.columns[XPOS], w.columns[FEATS])),
-        "Lemmas": alignment_score(alignment, lambda w, ga: w.columns[LEMMA] if ga(w).columns[LEMMA] != "_" else "_"),
-        "UAS": alignment_score(alignment, lambda w, ga: ga(w.parent)),
-        "LAS": alignment_score(alignment, lambda w, ga: (ga(w.parent), w.columns[DEPREL])),
-        # include enhanced DEPS score -- GB
-        "ELAS": enhanced_alignment_score(alignment,0),
-        "EULAS": enhanced_alignment_score(alignment,1),
-        "CLAS": alignment_score(alignment, lambda w, ga: (ga(w.parent), w.columns[DEPREL]),
-                                filter_fn=lambda w: w.is_content_deprel),
-        "MLAS": alignment_score(alignment, lambda w, ga: (ga(w.parent), w.columns[DEPREL], w.columns[UPOS], w.columns[FEATS],
-                                                         [(ga(c), c.columns[DEPREL], c.columns[UPOS], c.columns[FEATS])
-                                                          for c in w.functional_children]),
-                                filter_fn=lambda w: w.is_content_deprel),
-        "BLEX": alignment_score(alignment, lambda w, ga: (ga(w.parent), w.columns[DEPREL],
-                                                          w.columns[LEMMA] if ga(w).columns[LEMMA] != "_" else "_"),
-                                filter_fn=lambda w: w.is_content_deprel),
+        # "AllTags": alignment_score(alignment, lambda w, _: (w.columns[UPOS], w.columns[XPOS], w.columns[FEATS])),
+        # "Lemmas": alignment_score(alignment, lambda w, ga: w.columns[LEMMA] if ga(w).columns[LEMMA] != "_" else "_"),
+        # "UAS": alignment_score(alignment, lambda w, ga: ga(w.parent)),
+        # "LAS": alignment_score(alignment, lambda w, ga: (ga(w.parent), w.columns[DEPREL])),
+        # "CLAS": alignment_score(alignment, lambda w, ga: (ga(w.parent), w.columns[DEPREL]),
+                                # filter_fn=lambda w: w.is_content_deprel),
+        # "MLAS": alignment_score(alignment, lambda w, ga: (ga(w.parent), w.columns[DEPREL], w.columns[UPOS], w.columns[FEATS],
+        #                                                  [(ga(c), c.columns[DEPREL], c.columns[UPOS], c.columns[FEATS])
+        #                                                   for c in w.functional_children]),
+                                # filter_fn=lambda w: w.is_content_deprel),
+        # "BLEX": alignment_score(alignment, lambda w, ga: (ga(w.parent), w.columns[DEPREL],
+        #                                                   w.columns[LEMMA] if ga(w).columns[LEMMA] != "_" else "_"),
+        #                         filter_fn=lambda w: w.is_content_deprel),
     }
 
 
-def load_conllu_file(path,treebank_type):
+def load_conllu_file(path):
     _file = open(path, mode="r", **({"encoding": "utf-8"} if sys.version_info >= (3, 0) else {}))
-    return load_conllu(_file,treebank_type)
+    return load_conllu(_file)
 
 def evaluate_wrapper(args):
-    treebank_type = {}
-    enhancements = list(args.enhancements)
-    treebank_type['no_gapping'] = 1 if '1' in enhancements else 0
-    treebank_type['no_shared_parents_in_coordination'] = 1 if '2' in enhancements else 0
-    treebank_type['no_shared_dependents_in_coordination'] = 1 if '3' in enhancements else 0
-    treebank_type['no_control'] = 1 if '4' in enhancements else 0
-    treebank_type['no_external_arguments_of_relative_clauses'] = 1 if '5' in enhancements else 0
-    treebank_type['no_case_info'] = 1 if '6' in enhancements else 0
-
     # Load CoNLL-U files
-    gold_ud = load_conllu_file(args.gold_file,treebank_type)
-    system_ud = load_conllu_file(args.system_file,treebank_type)
+    gold_ud = load_conllu_file(args.gold_file)
+    system_ud = load_conllu_file(args.system_file)
     return evaluate(gold_ud, system_ud)
 
 def main():
@@ -661,8 +494,6 @@ def main():
                         help="Print all metrics.")
     parser.add_argument("--counts", "-c", default=False, action="store_true",
                         help="Print raw counts of correct/gold/system/aligned words instead of prec/rec/F1 for all metrics.")
-    parser.add_argument("--enhancements", type=str, default='0',
-                        help="Level of enhancements in the gold data (see guidelines) 0=all (default), 1=no gapping, 2=no shared parents, 3=no shared dependents 4=no control, 5=no external arguments, 6=no lemma info, combinations: 12=both 1 and 2 apply, etc.")
     args = parser.parse_args()
 
     # Evaluate
@@ -670,19 +501,18 @@ def main():
 
     # Print the evaluation
     if not args.verbose and not args.counts:
-        print("LAS F1 Score: {:.2f}".format(100 * evaluation["LAS"].f1))
-        print("ELAS F1 Score: {:.2f}".format(100 * evaluation["ELAS"].f1))
-        print("EULAS F1 Score: {:.2f}".format(100 * evaluation["EULAS"].f1))
-
-        print("MLAS Score: {:.2f}".format(100 * evaluation["MLAS"].f1))
-        print("BLEX Score: {:.2f}".format(100 * evaluation["BLEX"].f1))
+        pass
+        # print("LAS F1 Score: {:.2f}".format(100 * evaluation["LAS"].f1))
+        # print("MLAS Score: {:.2f}".format(100 * evaluation["MLAS"].f1))
+        # print("BLEX Score: {:.2f}".format(100 * evaluation["BLEX"].f1))
     else:
         if args.counts:
             print("Metric     | Correct   |      Gold | Predicted | Aligned")
         else:
             print("Metric     | Precision |    Recall |  F1 Score | AligndAcc")
         print("-----------+-----------+-----------+-----------+-----------")
-        for metric in["Tokens", "Sentences", "Words", "UPOS", "XPOS", "UFeats", "AllTags", "Lemmas", "UAS", "LAS", "ELAS", "EULAS", "CLAS", "MLAS", "BLEX"]:
+        # for metric in["Tokens", "Sentences", "Words", "UPOS", "XPOS", "UFeats", "AllTags", "Lemmas", "UAS", "LAS", "CLAS", "MLAS", "BLEX"]:
+        for metric in["Tokens", "Sentences", "Words", "UFeats"]:
             if args.counts:
                 print("{:11}|{:10} |{:10} |{:10} |{:10}".format(
                     metric,

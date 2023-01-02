@@ -12,6 +12,16 @@ from torch.nn.utils import clip_grad_norm_
 
 from models.multi_parser import update_eval_counts
 
+# wandb related
+import wandb
+
+import os
+
+wandb.config = {
+    "learning_rate": 4*(10**(-5)),
+    "epochs": 100,
+    "batch_size": 32
+}
 
 class Trainer:
     """An object of this class is responsible for executing the training logic on a given model: Loading the data,
@@ -74,7 +84,11 @@ class Trainer:
         training_starttime = time.time()
         not_improved_count = 0
 
+        current_epoch = 0
+
         for epoch in range(self.start_epoch, self.max_epochs + 1):
+            current_epoch = epoch
+
             # Perform one training epoch and output training metrics
             epoch_starttime = time.time()
             training_metrics = self.run_epoch(epoch, self.train_data_loader, training=True)
@@ -106,6 +120,7 @@ class Trainer:
                 self.logger.info("Training took {:.1f} mins.".format(training_duration))
                 return
 
+        wandb.config['epoch'] = current_epoch
         self.logger.info("Maximum epoch number reached. Training stops.")
         training_duration = (time.time() - training_starttime) / 60
         self.logger.info("Training took {:.1f} mins.".format(training_duration))
@@ -146,6 +161,8 @@ class Trainer:
                     epoch,
                     self._progress(num_evaluated_batches, data_loader),
                     batch_loss))
+                # wandb.log({'batch_loss': batch_loss})
+
 
         # Compute epoch metrics; log if validation epoch
         epoch_metrics = self.eval_criterion.compute_metrics_for_counts(epoch_annotation_counts)
@@ -154,6 +171,7 @@ class Trainer:
         elif training and not self.eval_criterion.weighting == "pareto":
             epoch_metrics["_AGGREGATE_"] = self.eval_criterion.compute_aggregate_metric(epoch_metrics)
         epoch_metrics["_loss"] = epoch_loss
+        wandb.log({'epoch_loss': epoch_loss})
 
         return epoch_metrics
 
@@ -206,6 +224,7 @@ class Trainer:
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()  # Take an LR scheduler step after each batch
                 self.logger.info("LRs are now: " + ", ".join("{:.2e}".format(lr) for lr in self.lr_scheduler.get_lr()))
+                # wandb.log({'lr': self.lr_scheduler.get_lr()[0]})
 
         return batch_loss, batch_annotation_counts
 
@@ -265,6 +284,11 @@ class Trainer:
             torch.save(state, filename)
             self.logger.info("Saving regular checkpoint: {} ...".format(filename))
 
+        checkpoint_l = [i for i in os.listdir(str(self.checkpoint_dir)) if i.startswith('checkpoint-epoch') and 'checkpoint-epoch{}.pth'.format(epoch) != i]
+        for checkpoint_t in checkpoint_l:
+            checkpoint_path = str(self.checkpoint_dir / checkpoint_t)
+            os.remove(checkpoint_path)
+
     def _resume_checkpoint(self, resume_path):
         """Resume from saved checkpoint.
 
@@ -297,10 +321,12 @@ class Trainer:
             return data.to(self.device)
         elif isinstance(data, dict):
             assert all(isinstance(val, torch.Tensor) for val in data.values())
-            assert all(val.device != self.device for val in data.values())
+            # assert all(val.device != self.device for val in data.values())
             data_on_device = dict()
             for key in data:
                 data_on_device[key] = data[key].to(self.device)
             return data_on_device
         else:
             raise Exception("Cannot move this kind of data to a device!")
+
+
