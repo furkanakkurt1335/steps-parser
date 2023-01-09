@@ -136,8 +136,8 @@ class ConfigParser:
 
         model_outputs = self._init_outputs(model_args["outputs"], embeddings_dim)
 
-        # post_processors = self._init_post_processors(model_args["post_processors"], model_outputs)
-        post_processors = []
+        post_processors = self._init_post_processors(model_args["post_processors"], model_outputs)
+        # post_processors = []
 
         # Build and return the actual model
         return MultiParser(embeddings_processor, model_outputs, post_processors=post_processors)

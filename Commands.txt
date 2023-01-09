@@ -1,0 +1,2 @@
+evaluate: Evaluate a model on a test set
+python3 src/parse_corpus.py MODEL_FOLDER TEST_CONLLU -e basic
