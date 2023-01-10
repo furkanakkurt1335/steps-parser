@@ -18,6 +18,8 @@ from parse_corpus import reset_file, parse_corpus, run_evaluation
 import os
 import wandb
 
+from smtp_gmail import send_email
+
 def main(config, eval_mode="basic"):
     """Main function to initialize model, load data, and run training.
 
@@ -41,6 +43,8 @@ def main(config, eval_mode="basic"):
         pth_path = str(config._save_dir / pth_t)
         os.remove(pth_path)
         print('Removed: {}'.format(pth_path))
+
+    send_email(config['name'], config['experiment'], os.environ.get('SLURM_JOB_ID'))
 
 
 def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
