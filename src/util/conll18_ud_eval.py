@@ -218,7 +218,8 @@ def load_conllu(file):
 
             # Check there is a single root node
             if len([word for word in ud.words[sentence_start:] if word.parent is None]) != 1:
-                print("There are multiple roots in a sentence")
+                pass
+                # print("There are multiple roots in a sentence")
                 # raise UDError("There are multiple roots in a sentence")
 
             # End the sentence

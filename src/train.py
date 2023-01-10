@@ -36,6 +36,11 @@ def main(config, eval_mode="basic"):
 
     if "test" in config["data_loaders"]["paths"]:
         evaluate_best_trained_model(trainer, config, eval_mode=eval_mode)
+    pth_l = [i for i in os.listdir(str(config._save_dir)) if i.endswith('.pth')]
+    for pth_t in pth_l:
+        pth_path = str(config._save_dir / pth_t)
+        os.remove(pth_path)
+        print('Removed: {}'.format(pth_path))
 
 
 def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
@@ -55,8 +60,7 @@ def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
 
     THIS_DIR = os.path.dirname(os.path.realpath(__file__))
     tests_parsed_folder_path = os.path.join(THIS_DIR, 'tests-parsed')
-    test_parsed_path = os.path.join(tests_parsed_folder_path, '{s_id}_{r_n}.conllu'.format(s_id=os.environ.get('SLURM_JOB_ID'), r_n=wandb.run.name))
-    # test_parsed_path = os.path.join(tests_parsed_folder_path, '{s_id}.conllu'.format(s_id=os.environ.get('SLURM_JOB_ID')))
+    test_parsed_path = os.path.join(tests_parsed_folder_path, '{s_id}.conllu'.format(s_id=os.environ.get('SLURM_JOB_ID')))
     if not(os.path.exists(tests_parsed_folder_path)):
         os.mkdir(tests_parsed_folder_path)
 

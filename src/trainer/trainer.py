@@ -280,14 +280,14 @@ class Trainer:
             best_path = str(self.checkpoint_dir / 'model_best.pth')
             torch.save(state, best_path)
             self.logger.info("Saving current best: model_best.pth ...")
-        else:
-            torch.save(state, filename)
-            self.logger.info("Saving regular checkpoint: {} ...".format(filename))
+        # else:
+        #     torch.save(state, filename)
+        #     self.logger.info("Saving regular checkpoint: {} ...".format(filename))
 
-        checkpoint_l = [i for i in os.listdir(str(self.checkpoint_dir)) if i.startswith('checkpoint-epoch') and 'checkpoint-epoch{}.pth'.format(epoch) != i]
-        for checkpoint_t in checkpoint_l:
-            checkpoint_path = str(self.checkpoint_dir / checkpoint_t)
-            os.remove(checkpoint_path)
+        # checkpoint_l = [i for i in os.listdir(str(self.checkpoint_dir)) if i.startswith('checkpoint-epoch') and 'checkpoint-epoch{}.pth'.format(epoch) != i]
+        # for checkpoint_t in checkpoint_l:
+        #     checkpoint_path = str(self.checkpoint_dir / checkpoint_t)
+        #     os.remove(checkpoint_path)
 
     def _resume_checkpoint(self, resume_path):
         """Resume from saved checkpoint.
