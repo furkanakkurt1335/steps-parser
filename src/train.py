@@ -37,14 +37,15 @@ def main(config, eval_mode="basic"):
     trainer.train()
 
     if "test" in config["data_loaders"]["paths"]:
-        evaluate_best_trained_model(trainer, config, eval_mode=eval_mode)
+        eval_results = evaluate_best_trained_model(trainer, config, eval_mode=eval_mode)
+
     pth_l = [i for i in os.listdir(str(config._save_dir)) if i.endswith('.pth')]
     for pth_t in pth_l:
         pth_path = str(config._save_dir / pth_t)
         os.remove(pth_path)
         print('Removed: {}'.format(pth_path))
 
-    send_email(config['name'], config['experiment'], os.environ.get('SLURM_JOB_ID'))
+    send_email(config['name'], config['experiment'], os.environ.get('SLURM_JOB_ID'), eval_results)
 
 
 def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
@@ -75,8 +76,8 @@ def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
         gold_test_file = reset_file(gold_test_file, config["data_loaders"]["paths"]["test"])
         test_evaluation = run_evaluation(gold_test_file, output_file, mode=eval_mode)
     
-    # for score_key in test_evaluation.keys():
-    #     wandb.log({score_key: str(test_evaluation[score_key])})
+    for score_key in test_evaluation.keys():
+        wandb.log( { score_key: test_evaluation[score_key].f1 } )
 
     if eval_mode == "basic":
         logger.log_final_metrics_basic(test_evaluation, suffix="_test")
@@ -86,6 +87,8 @@ def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
         raise Exception(f"Unknown evaluation mode {eval_mode}")
 
     logger.log_artifact(test_parsed_path)
+
+    return test_evaluation
 
 
 def init_config_modification(raw_modifications):
