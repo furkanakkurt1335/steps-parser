@@ -3,3 +3,5 @@
 
 info.log
 mlruns/
+wandb/
+*credentials.json

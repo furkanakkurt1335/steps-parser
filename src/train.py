@@ -38,7 +38,9 @@ def main(config, eval_mode="basic"):
 
     if "test" in config["data_loaders"]["paths"]:
         eval_results = evaluate_best_trained_model(trainer, config, eval_mode=eval_mode)
-    print_eval_results(config['name'], eval_results)
+    train_type = config['name']
+    print_eval_results(train_type, eval_results)
+    log_wandb(train_type, eval_results)
 
     pth_l = [i for i in os.listdir(str(config._save_dir)) if i.endswith('.pth')]
     for pth_t in pth_l:
@@ -46,27 +48,29 @@ def main(config, eval_mode="basic"):
         os.remove(pth_path)
         print('Removed: {}'.format(pth_path))
 
-    send_email(config['name'], config['experiment'], os.environ.get('SLURM_JOB_ID'), eval_results)
+    send_email(train_type, config['experiment'], os.environ.get('SLURM_JOB_ID'), eval_results)
 
 
 def print_eval_results(train_type, eval_results):
-    if train_type == 'feats-only':
+    if train_type in ['feats-only', 'upos_feats']:
         res = 'UFeats: {ufeats}'.format(ufeats=eval_results['UFeats'].f1)
     elif train_type == 'lemma-only':
         res = 'Lemmas: {lemmas}'.format(lemmas=eval_results['Lemmas'].f1)
     elif train_type == 'pos-only':
         res = 'UPOS: {upos}'.format(upos=eval_results['UPOS'].f1)
-    elif train_type == 'dep-parsing':
+    elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats']:
         res = 'UAS: {uas}, LAS: {las}'.format(uas=eval_results['UAS'].f1, las=eval_results['LAS'].f1)
-    elif train_type == 'dep-parsing_upos':
-        res = 'UAS: {uas}, LAS: {las}'.format(uas=eval_results['UAS'].f1, las=eval_results['LAS'].f1)
-    elif train_type == 'dep-parsing_feats':
-        res = 'UAS: {uas}, LAS: {las}'.format(uas=eval_results['UAS'].f1, las=eval_results['LAS'].f1)
-    elif train_type == 'dep-parsing_upos_feats':
-        res = 'UAS: {uas}, LAS: {las}'.format(uas=eval_results['UAS'].f1, las=eval_results['LAS'].f1)
-    elif train_type == 'upos_feats':
-        res = 'UFeats: {ufeats}'.format(ufeats=eval_results['UFeats'].f1)
     print('Eval results: {}.'.format(res))
+
+def log_wandb(train_type, eval_results):
+    if train_type in ['feats-only', 'upos_feats']:
+        wandb.log({'UFeats': eval_results['UFeats'].f1})
+    elif train_type == 'lemma-only':
+        wandb.log({'Lemmas': eval_results['Lemmas'].f1})
+    elif train_type == 'pos-only':
+        wandb.log({'UPOS': eval_results['UPOS'].f1})
+    elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats']:
+        wandb.log({'UAS': eval_results['UAS'].f1, 'LAS': eval_results['LAS'].f1})
 
 def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
     """Evaluate the model with best validation performance on test data after training.
@@ -95,9 +99,6 @@ def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
         output_file = reset_file(output_file, test_parsed_path)
         gold_test_file = reset_file(gold_test_file, config["data_loaders"]["paths"]["test"])
         test_evaluation = run_evaluation(gold_test_file, output_file, mode=eval_mode)
-    
-    for score_key in test_evaluation.keys():
-        wandb.log( { score_key: test_evaluation[score_key].f1 } )
 
     if eval_mode == "basic":
         logger.log_final_metrics_basic(test_evaluation, suffix="_test")
