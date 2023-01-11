@@ -18,7 +18,7 @@ from parse_corpus import reset_file, parse_corpus, run_evaluation
 import os
 import wandb
 
-from smtp_gmail import send_email
+from smtp_gmail import send_start_email, send_res_email
 
 def main(config, eval_mode="basic"):
     """Main function to initialize model, load data, and run training.
@@ -34,11 +34,14 @@ def main(config, eval_mode="basic"):
 
     trainer = config.init_trainer(model, data_loaders["train"], data_loaders["dev"])
 
+    train_type = config['train_type']
+    treebank = config['treebank']
+    job_id = os.environ.get('SLURM_JOB_ID')
+    send_start_email(train_type, treebank, job_id)
     trainer.train()
 
     if "test" in config["data_loaders"]["paths"]:
         eval_results = evaluate_best_trained_model(trainer, config, eval_mode=eval_mode)
-    train_type = config['name']
     print_eval_results(train_type, eval_results)
     log_wandb(train_type, eval_results)
 
@@ -47,8 +50,9 @@ def main(config, eval_mode="basic"):
         pth_path = str(config._save_dir / pth_t)
         os.remove(pth_path)
         print('Removed: {}'.format(pth_path))
+        os.system('python3 /clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/gitlab-repo/trains/slurm/run-one.py')
 
-    send_email(train_type, config['experiment'], os.environ.get('SLURM_JOB_ID'), eval_results)
+    send_res_email(train_type, treebank, job_id, eval_results)
 
 
 def print_eval_results(train_type, eval_results):
