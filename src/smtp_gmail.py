@@ -15,14 +15,14 @@ def send_email(train_type, treebank, job_id):
     context = ssl.create_default_context()
 
     message = '''\
-    Subject: Training done on cmpeinspurgpu!
+Subject: Training done on cmpeinspurgpu!
 
-    Hi Dear Furkan,
+Hi Dear Furkan,
 
-    Mailing from cmpeinspurgpu. Training of type {tt} in treebank {tb} with job ID {job_id} is done.
+Mailing from cmpeinspurgpu. Training of type {tt} in treebank {tb} with job ID {job_id} is done.
 
-    Best,
-    Furkan
+Best,
+Furkan
     '''.format(tt=train_type, tb=treebank, job_id=job_id)
 
     with smtplib.SMTP_SSL('smtp.gmail.com', port, context=context) as server:

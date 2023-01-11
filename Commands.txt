@@ -1,2 +1,5 @@
 evaluate: Evaluate a model on a test set
 python3 src/parse_corpus.py MODEL_FOLDER TEST_CONLLU -e basic
+
+resume: Resume training from a checkpoint
+python3 src/train.py config.json --resume model.pth
