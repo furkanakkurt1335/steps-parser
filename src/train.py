@@ -15,10 +15,13 @@ from pathlib import Path
 from init_config import ConfigParser
 from parse_corpus import reset_file, parse_corpus, run_evaluation
 
-import os
-import wandb
+import os, json
+# import wandb
 
 from smtp_gmail import send_start_email, send_res_email
+import subprocess
+
+THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 def main(config, eval_mode="basic"):
     """Main function to initialize model, load data, and run training.
@@ -42,8 +45,9 @@ def main(config, eval_mode="basic"):
 
     if "test" in config["data_loaders"]["paths"]:
         eval_results = evaluate_best_trained_model(trainer, config, eval_mode=eval_mode)
+    update_scores(train_type, treebank, eval_results)
     print_eval_results(train_type, eval_results)
-    log_wandb(train_type, eval_results)
+    # log_wandb(train_type, eval_results)
 
     pth_l = [i for i in os.listdir(str(config._save_dir)) if i.endswith('.pth')]
     for pth_t in pth_l:
@@ -56,25 +60,61 @@ def main(config, eval_mode="basic"):
 
 
 def print_eval_results(train_type, eval_results):
+    ufeats = eval_results['UFeats'].f1
+    lemmas = eval_results['Lemmas'].f1
+    upos = eval_results['UPOS'].f1
+    uas = eval_results['UAS'].f1
+    las = eval_results['LAS'].f1
+
     if train_type in ['feats-only', 'upos_feats']:
-        res = 'UFeats: {ufeats}'.format(ufeats=eval_results['UFeats'].f1)
+        res = f'UFeats: {100*ufeats:.2f}'
+        job_id = os.environ.get('SLURM_JOB_ID')
+        feats_piece_res = subprocess.run(['python3', '/clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/gitlab-repo/util/evaluate_feats_piece.py', '--gold', config['data_loaders']['paths']['test'], '--pred', os.path.join(THIS_DIR, 'tests-parsed/{ji}.conllu'.format(ji=job_id))], capture_output=True).stdout.decode('utf-8')
+        if feats_piece_res:
+            res += '. ' + feats_piece_res
     elif train_type == 'lemma-only':
-        res = 'Lemmas: {lemmas}'.format(lemmas=eval_results['Lemmas'].f1)
+        res = f'Lemmas: {100*lemmas:.2f}'
     elif train_type == 'pos-only':
-        res = 'UPOS: {upos}'.format(upos=eval_results['UPOS'].f1)
+        res = f'UPOS: {100*upos:.2f}'
     elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats']:
-        res = 'UAS: {uas}, LAS: {las}'.format(uas=eval_results['UAS'].f1, las=eval_results['LAS'].f1)
+        res = f'UAS: {100*uas:.2f}, LAS: {100*las:.2f}'
     print('Eval results: {}.'.format(res))
 
-def log_wandb(train_type, eval_results):
+def update_scores(train_type, treebank, eval_results):
+    home = os.path.expanduser('~')
+    scores_path = os.path.join(home, 'eval-ud/gitlab-repo/trains/scores/scores.json')
+    with open(scores_path, 'r') as f:
+        scores = json.load(f)
     if train_type in ['feats-only', 'upos_feats']:
-        wandb.log({'UFeats': eval_results['UFeats'].f1})
+        ufeats = eval_results['UFeats'].f1; ufeats = float(f'{100*ufeats:.2f}')
+        scores[train_type][treebank]['UFeats'].append(ufeats)
+        job_id = os.environ.get('SLURM_JOB_ID')
+        feats_piece_res = float(subprocess.run(['python3', '/clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/gitlab-repo/util/evaluate_feats_piece.py', '--gold', config['data_loaders']['paths']['test'], '--pred', os.path.join(THIS_DIR, 'tests-parsed/{ji}.conllu'.format(ji=job_id))], capture_output=True).stdout.decode('utf-8').replace('Feature based score: ', ''))
+        scores[train_type][treebank]['IndFeats'].append(feats_piece_res)
+        
     elif train_type == 'lemma-only':
-        wandb.log({'Lemmas': eval_results['Lemmas'].f1})
+        lemmas = eval_results['Lemmas'].f1; lemmas = float(f'{100*lemmas:.2f}')
+        scores[train_type][treebank]['Lemmas'].append(lemma)
     elif train_type == 'pos-only':
-        wandb.log({'UPOS': eval_results['UPOS'].f1})
+        upos = eval_results['UPOS'].f1; upos = float(f'{100*upos:.2f}')
+        scores[train_type][treebank]['UPOS'].append(upos)
     elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats']:
-        wandb.log({'UAS': eval_results['UAS'].f1, 'LAS': eval_results['LAS'].f1})
+        uas = eval_results['UAS'].f1; uas = float(f'{100*uas:.2f}')
+        las = eval_results['LAS'].f1; las = float(f'{100*las:.2f}')
+        scores[train_type][treebank]['UAS'].append(uas)
+        scores[train_type][treebank]['LAS'].append(las)
+    with open(scores_path, 'w') as f:
+        json.dump(scores, f)
+
+# def log_wandb(train_type, eval_results):
+#     if train_type in ['feats-only', 'upos_feats']:
+#         wandb.log({'UFeats': eval_results['UFeats'].f1})
+#     elif train_type == 'lemma-only':
+#         wandb.log({'Lemmas': eval_results['Lemmas'].f1})
+#     elif train_type == 'pos-only':
+#         wandb.log({'UPOS': eval_results['UPOS'].f1})
+#     elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats']:
+#         wandb.log({'UAS': eval_results['UAS'].f1, 'LAS': eval_results['LAS'].f1})
 
 def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
     """Evaluate the model with best validation performance on test data after training.
@@ -154,9 +194,9 @@ if __name__ == '__main__':
     if args.save_dir is not None:
         modification["trainer.save_dir"] = args.save_dir
 
-    wandb.init(project="eval-ud")
-    config_name = os.path.splitext(os.path.basename(args.config))[0]
-    wandb.run.name = config_name
+    # wandb.init(project="eval-ud")
+    # config_name = os.path.splitext(os.path.basename(args.config))[0]
+    # wandb.run.name = config_name
 
     config = ConfigParser.from_args(args, modification=modification)
     main(config, eval_mode=args.eval)

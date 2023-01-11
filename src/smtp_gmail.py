@@ -1,5 +1,5 @@
 import smtplib, ssl
-import json, os
+import json, os, subprocess
 
 port = 465
 
@@ -36,22 +36,18 @@ def send_res_email(train_type, treebank, job_id, eval_results):
     uas = eval_results['UAS'].f1
     las = eval_results['LAS'].f1
 
-    if train_type == 'feats-only':
+    if train_type in ['feats-only', 'upos_feats']:
         res = f'UFeats: {100*ufeats:.2f}'
+        job_id = os.environ.get('SLURM_JOB_ID')
+        feats_piece_res = subprocess.run(['python3', '/clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/gitlab-repo/util/evaluate_feats_piece.py', '--gold', config['data_loaders']['paths']['test'], '--pred', os.path.join(THIS_DIR, 'tests-parsed/{ji}.conllu'.format(ji=job_id))], capture_output=True).stdout.decode('utf-8')
+        if feats_piece_res:
+            res += '. ' + feats_piece_res
     elif train_type == 'lemma-only':
         res = f'Lemmas: {100*lemmas:.2f}'
     elif train_type == 'pos-only':
         res = f'UPOS: {100*upos:.2f}'
-    elif train_type == 'dep-parsing':
+    elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats']:
         res = f'UAS: {100*uas:.2f}, LAS: {100*las:.2f}'
-    elif train_type == 'dep-parsing_upos':
-        res = f'UAS: {100*uas:.2f}, LAS: {100*las:.2f}'
-    elif train_type == 'dep-parsing_feats':
-        res = f'UAS: {100*uas:.2f}, LAS: {100*las:.2f}'
-    elif train_type == 'dep-parsing_upos_feats':
-        res = f'UAS: {100*uas:.2f}, LAS: {100*las:.2f}'
-    elif train_type == 'upos_feats':
-        res = f'UFeats: {100*ufeats:.2f}'
 
     message = '''\
 Subject: Training done on cmpeinspurgpu!

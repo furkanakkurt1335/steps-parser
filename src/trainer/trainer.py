@@ -13,15 +13,15 @@ from torch.nn.utils import clip_grad_norm_
 from models.multi_parser import update_eval_counts
 
 # wandb related
-import wandb
+# import wandb
 
 import os
 
-wandb.config = {
-    "learning_rate": 4*(10**(-5)),
-    "epochs": 100,
-    "batch_size": 32
-}
+# wandb.config = {
+#     "learning_rate": 4*(10**(-5)),
+#     "epochs": 100,
+#     "batch_size": 32
+# }
 
 class Trainer:
     """An object of this class is responsible for executing the training logic on a given model: Loading the data,
@@ -120,7 +120,7 @@ class Trainer:
                 self.logger.info("Training took {:.1f} mins.".format(training_duration))
                 return
 
-        wandb.config['epoch'] = current_epoch
+        # wandb.config['epoch'] = current_epoch
         self.logger.info("Maximum epoch number reached. Training stops.")
         training_duration = (time.time() - training_starttime) / 60
         self.logger.info("Training took {:.1f} mins.".format(training_duration))
@@ -171,7 +171,7 @@ class Trainer:
         elif training and not self.eval_criterion.weighting == "pareto":
             epoch_metrics["_AGGREGATE_"] = self.eval_criterion.compute_aggregate_metric(epoch_metrics)
         epoch_metrics["_loss"] = epoch_loss
-        wandb.log({'epoch_loss': epoch_loss})
+        # wandb.log({'epoch_loss': epoch_loss})
 
         return epoch_metrics
 
