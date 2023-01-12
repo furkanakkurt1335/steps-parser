@@ -91,7 +91,6 @@ def update_scores(train_type, treebank, eval_results):
         job_id = os.environ.get('SLURM_JOB_ID')
         feats_piece_res = float(subprocess.run(['python3', '/clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/gitlab-repo/util/evaluate_feats_piece.py', '--gold', config['data_loaders']['paths']['test'], '--pred', os.path.join(THIS_DIR, 'tests-parsed/{ji}.conllu'.format(ji=job_id))], capture_output=True).stdout.decode('utf-8').replace('Feature based score: ', ''))
         scores[train_type][treebank]['IndFeats'].append(feats_piece_res)
-        
     elif train_type == 'lemma-only':
         lemmas = eval_results['Lemmas'].f1; lemmas = float(f'{100*lemmas:.2f}')
         scores[train_type][treebank]['Lemmas'].append(lemma)
@@ -103,6 +102,7 @@ def update_scores(train_type, treebank, eval_results):
         las = eval_results['LAS'].f1; las = float(f'{100*las:.2f}')
         scores[train_type][treebank]['UAS'].append(uas)
         scores[train_type][treebank]['LAS'].append(las)
+    scores[train_type][treebank]['jobs'].append(job_id)
     with open(scores_path, 'w') as f:
         json.dump(scores, f)
 
