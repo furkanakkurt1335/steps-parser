@@ -30,7 +30,7 @@ Furkan
     msg['To'] = receiver_email
     with smtplib.SMTP_SSL('smtp.gmail.com', port, context=context) as server:
         server.login(sender_email, sender_password)
-        server.sendmail(sender_email, receiver_email, message)
+        server.send_message(msg)
 
 def send_res_email(train_type, treebank, job_id, eval_results):
     ufeats = eval_results['UFeats'].f1
@@ -70,4 +70,23 @@ Furkan
 
     with smtplib.SMTP_SSL('smtp.gmail.com', port, context=context) as server:
         server.login(sender_email, sender_password)
-        server.sendmail(sender_email, receiver_email, message)
+        server.send_message(msg)
+
+def send_finish_email():
+    message = '''\
+Hi Dear Furkan,
+
+Mailing from cmpeinspurgpu. No more jobs to run! 🎉
+
+Best,
+Furkan
+    '''
+    msg = EmailMessage()
+    msg.set_content(message)
+    msg['Subject'] = 'No more jobs to run on cmpeinspurgpu!'
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+
+    with smtplib.SMTP_SSL('smtp.gmail.com', port, context=context) as server:
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
