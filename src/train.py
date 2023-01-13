@@ -75,7 +75,7 @@ def print_eval_results(train_type, eval_results):
         res = f'Lemmas: {100*lemmas:.2f}'
     elif train_type == 'pos-only':
         res = f'UPOS: {100*upos:.2f}'
-    elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats']:
+    elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats', 'dep-parsing_lemma']:
         res = f'UAS: {100*uas:.2f}, LAS: {100*las:.2f}'
     print('Eval results: {}.'.format(res))
 
@@ -95,7 +95,7 @@ def update_scores(train_type, treebank, eval_results):
     elif train_type == 'pos-only':
         upos = eval_results['UPOS'].f1; upos = float(f'{100*upos:.2f}')
         scores[train_type][treebank]['UPOS'].append(upos)
-    elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats']:
+    elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats', 'dep-parsing_lemma']:
         uas = eval_results['UAS'].f1; uas = float(f'{100*uas:.2f}')
         las = eval_results['LAS'].f1; las = float(f'{100*las:.2f}')
         scores[train_type][treebank]['UAS'].append(uas)
@@ -111,7 +111,7 @@ def update_scores(train_type, treebank, eval_results):
 #         wandb.log({'Lemmas': eval_results['Lemmas'].f1})
 #     elif train_type == 'pos-only':
 #         wandb.log({'UPOS': eval_results['UPOS'].f1})
-#     elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats']:
+#     elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats', 'dep-parsing_lemma']:
 #         wandb.log({'UAS': eval_results['UAS'].f1, 'LAS': eval_results['LAS'].f1})
 
 def evaluate_best_trained_model(trainer, config, eval_mode="basic"):

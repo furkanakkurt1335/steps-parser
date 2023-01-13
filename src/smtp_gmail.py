@@ -49,7 +49,7 @@ def send_res_email(train_type, treebank, job_id, eval_results):
         res = f'Lemmas: {100*lemmas:.2f}'
     elif train_type == 'pos-only':
         res = f'UPOS: {100*upos:.2f}'
-    elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats']:
+    elif train_type in ['dep-parsing', 'dep-parsing_upos', 'dep-parsing_feats', 'dep-parsing_upos_feats', 'dep-parsing_lemma']:
         res = f'UAS: {100*uas:.2f}, LAS: {100*las:.2f}'
 
     message = '''\
