@@ -22,6 +22,7 @@ from smtp_gmail import send_start_email, send_res_email
 import subprocess
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+job_id = int(os.environ.get('SLURM_JOB_ID'))
 
 def main(config, eval_mode="basic"):
     """Main function to initialize model, load data, and run training.
@@ -39,7 +40,6 @@ def main(config, eval_mode="basic"):
 
     train_type = config['train_type']
     treebank = config['treebank']
-    job_id = os.environ.get('SLURM_JOB_ID')
     send_start_email(train_type, treebank, job_id)
     trainer.train()
 
@@ -68,7 +68,6 @@ def print_eval_results(train_type, eval_results):
 
     if train_type in ['feats-only', 'upos_feats']:
         res = f'UFeats: {100*ufeats:.2f}'
-        job_id = os.environ.get('SLURM_JOB_ID')
         feats_piece_res = subprocess.run(['python3', '/clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/gitlab-repo/util/evaluate_feats_piece.py', '--gold', config['data_loaders']['paths']['test'], '--pred', os.path.join(THIS_DIR, 'tests-parsed/{ji}.conllu'.format(ji=job_id))], capture_output=True).stdout.decode('utf-8')
         if feats_piece_res:
             res += '. ' + feats_piece_res
@@ -88,7 +87,6 @@ def update_scores(train_type, treebank, eval_results):
     if train_type in ['feats-only', 'upos_feats']:
         ufeats = eval_results['UFeats'].f1; ufeats = float(f'{100*ufeats:.2f}')
         scores[train_type][treebank]['UFeats'].append(ufeats)
-        job_id = os.environ.get('SLURM_JOB_ID')
         feats_piece_res = float(subprocess.run(['python3', '/clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/gitlab-repo/util/evaluate_feats_piece.py', '--gold', config['data_loaders']['paths']['test'], '--pred', os.path.join(THIS_DIR, 'tests-parsed/{ji}.conllu'.format(ji=job_id))], capture_output=True).stdout.decode('utf-8').replace('Feature based score: ', ''))
         scores[train_type][treebank]['IndFeats'].append(feats_piece_res)
     elif train_type == 'lemma-only':
@@ -133,7 +131,7 @@ def evaluate_best_trained_model(trainer, config, eval_mode="basic"):
 
     THIS_DIR = os.path.dirname(os.path.realpath(__file__))
     tests_parsed_folder_path = os.path.join(THIS_DIR, 'tests-parsed')
-    test_parsed_path = os.path.join(tests_parsed_folder_path, '{s_id}.conllu'.format(s_id=os.environ.get('SLURM_JOB_ID')))
+    test_parsed_path = os.path.join(tests_parsed_folder_path, '{s_id}.conllu'.format(s_id=job_id))
     if not(os.path.exists(tests_parsed_folder_path)):
         os.mkdir(tests_parsed_folder_path)
 
