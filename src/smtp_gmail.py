@@ -38,13 +38,12 @@ def send_res_email(train_type, treebank, job_id, eval_results):
     upos = eval_results['UPOS'].f1
     uas = eval_results['UAS'].f1
     las = eval_results['LAS'].f1
-
     if train_type in ['feats-only', 'upos_feats']:
-        res = f'UFeats: {100*ufeats:.2f}'
-        job_id = os.environ.get('SLURM_JOB_ID')
-        feats_piece_res = subprocess.run(['python3', '/clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/gitlab-repo/util/evaluate_feats_piece.py', '--gold', config['data_loaders']['paths']['test'], '--pred', os.path.join(THIS_DIR, 'tests-parsed/{ji}.conllu'.format(ji=job_id))], capture_output=True).stdout.decode('utf-8')
-        if feats_piece_res:
-            res += '. ' + feats_piece_res
+        if 'IndFeats' in eval_results.keys():
+            ind_feats = eval_results['IndFeats']
+            res = f'UFeats: {100*ufeats:.2f}, IndFeats: {ind_feats:.2f}'
+        else:
+            res = f'UFeats: {100*ufeats:.2f}'
     elif train_type == 'lemma-only':
         res = f'Lemmas: {100*lemmas:.2f}'
     elif train_type == 'pos-only':

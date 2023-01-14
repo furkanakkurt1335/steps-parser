@@ -19,7 +19,7 @@ import os, json
 # import wandb
 
 from smtp_gmail import send_start_email, send_res_email
-import subprocess
+from eval_indfeats import eval_indfeats
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 job_id = int(os.environ.get('SLURM_JOB_ID'))
@@ -45,6 +45,8 @@ def main(config, eval_mode="basic"):
 
     if "test" in config["data_loaders"]["paths"]:
         eval_results = evaluate_best_trained_model(trainer, config, eval_mode=eval_mode)
+    if train_type in ['feats-only', 'upos_feats']:
+        eval_results['IndFeats'] = eval_indfeats(config['data_loaders']['paths']['test'], os.path.join(THIS_DIR, 'tests-parsed/{ji}.conllu'.format(ji=job_id)))
     update_scores(train_type, treebank, eval_results)
     print_eval_results(train_type, eval_results)
     # log_wandb(train_type, eval_results)
@@ -67,10 +69,8 @@ def print_eval_results(train_type, eval_results):
     las = eval_results['LAS'].f1
 
     if train_type in ['feats-only', 'upos_feats']:
-        res = f'UFeats: {100*ufeats:.2f}'
-        feats_piece_res = subprocess.run(['python3', '/clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/gitlab-repo/util/evaluate_feats_piece.py', '--gold', config['data_loaders']['paths']['test'], '--pred', os.path.join(THIS_DIR, 'tests-parsed/{ji}.conllu'.format(ji=job_id))], capture_output=True).stdout.decode('utf-8')
-        if feats_piece_res:
-            res += '. ' + feats_piece_res
+        ind_feats = eval_results['IndFeats']
+        res = f'UFeats: {100*ufeats:.2f}, IndFeats: {ind_feats:.2f}'
     elif train_type == 'lemma-only':
         res = f'Lemmas: {100*lemmas:.2f}'
     elif train_type == 'pos-only':
@@ -87,8 +87,8 @@ def update_scores(train_type, treebank, eval_results):
     if train_type in ['feats-only', 'upos_feats']:
         ufeats = eval_results['UFeats'].f1; ufeats = float(f'{100*ufeats:.2f}')
         scores[train_type][treebank]['UFeats'].append(ufeats)
-        feats_piece_res = float(subprocess.run(['python3', '/clusterusers/furkan.akkurt@boun.edu.tr/eval-ud/gitlab-repo/util/evaluate_feats_piece.py', '--gold', config['data_loaders']['paths']['test'], '--pred', os.path.join(THIS_DIR, 'tests-parsed/{ji}.conllu'.format(ji=job_id))], capture_output=True).stdout.decode('utf-8').replace('Feature based score: ', ''))
-        scores[train_type][treebank]['IndFeats'].append(feats_piece_res)
+        ind_feats = eval_results['IndFeats']
+        scores[train_type][treebank]['IndFeats'].append(ind_feats)
     elif train_type == 'lemma-only':
         lemmas = eval_results['Lemmas'].f1; lemmas = float(f'{100*lemmas:.2f}')
         scores[train_type][treebank]['Lemmas'].append(lemma)
