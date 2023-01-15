@@ -91,7 +91,7 @@ def update_scores(train_type, treebank, eval_results):
         scores[train_type][treebank]['IndFeats'].append(ind_feats)
     elif train_type == 'lemma-only':
         lemmas = eval_results['Lemmas'].f1; lemmas = float(f'{100*lemmas:.2f}')
-        scores[train_type][treebank]['Lemmas'].append(lemma)
+        scores[train_type][treebank]['Lemmas'].append(lemmas)
     elif train_type == 'pos-only':
         upos = eval_results['UPOS'].f1; upos = float(f'{100*upos:.2f}')
         scores[train_type][treebank]['UPOS'].append(upos)
